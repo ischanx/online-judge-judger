@@ -1,5 +1,5 @@
 import { EggAppConfig, EggAppInfo, PowerPartial } from 'egg';
-
+const packageJSON = require('../../package.json');
 export type DefaultConfig = PowerPartial<EggAppConfig>;
 
 export default (appInfo: EggAppInfo) => {
@@ -9,7 +9,7 @@ export default (appInfo: EggAppInfo) => {
   config.keys = appInfo.name + '_1641210158431_5686';
 
   // add your config here
-  config.middleware = [];
+  config.middleware = ['validateMiddleware'];
 
   config.midwayFeature = {
     // true 代表使用 midway logger
@@ -17,7 +17,11 @@ export default (appInfo: EggAppInfo) => {
     replaceEggLogger: true,
   };
 
-  // config.security = {
+  config.judgerToken = 'judgerToken';
+
+  config.version = packageJSON.version;
+
+  // config.security = {http.ts
   //   csrf: false,
   // };
 
