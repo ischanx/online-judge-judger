@@ -10,10 +10,9 @@ import {
 } from '@midwayjs/decorator';
 
 import { Context } from 'egg';
-import { JudgeService } from '../service/judge';
+import { JudgeService } from '../service/judger';
 import { getCPUUsage } from '../utils/os-utils';
 const os = require('os');
-
 @Provide()
 @Controller('/')
 export class ProblemController {
@@ -25,6 +24,8 @@ export class ProblemController {
 
   @Config('version')
   version: string;
+
+  index = 0;
 
   @Get('/ping')
   async getServerInfo() {
@@ -46,8 +47,8 @@ export class ProblemController {
   }
 
   @Post('/judge')
-  async delete(@Body(ALL) body) {
-    console.log(body);
-    this.ctx.body = '123';
+  async judge(@Body(ALL) body) {
+    const res = await this.judgeService.run(body);
+    this.ctx.body = res;
   }
 }
