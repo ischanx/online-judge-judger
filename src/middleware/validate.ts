@@ -6,13 +6,13 @@ import { ValidationError } from 'joi';
 
 @Provide()
 export class validateMiddleware implements IWebMiddleware {
-  @Config('judgerToken')
-  token: string;
+  @Config('JUDGE_TOKEN')
+  JUDGE_TOKEN: string;
 
   resolve() {
     return async (ctx: Context, next: IMidwayWebNext) => {
       const requestToken = ctx.request.headers['x-judge-server-token'];
-      if (requestToken !== this.token) {
+      if (requestToken !== this.JUDGE_TOKEN) {
         ctx.body = {
           code: 400,
           message: '评测机token不一致，请检查配置',

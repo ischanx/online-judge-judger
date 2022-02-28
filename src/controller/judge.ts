@@ -22,8 +22,8 @@ export class ProblemController {
   @Inject()
   judgeService: JudgeService;
 
-  @Config('version')
-  version: string;
+  @Config('JUDGE_VERSION')
+  JUDGE_VERSION: string;
 
   index = 0;
 
@@ -34,7 +34,7 @@ export class ProblemController {
     const totalmem = os.totalmem();
     const cpuUsage = await getCPUUsage();
     const server = {
-      judger_version: this.version, // 评测机版本
+      judge_version: this.JUDGE_VERSION, // 评测机版本
       hostname: os.hostname(), // 主机名称
       cpu_core: cpus.length, // cpu的核心数，决定并发任务的数量
       cpu_model: cpus[0].model, // cpu名称
