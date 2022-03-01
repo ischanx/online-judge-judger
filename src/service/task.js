@@ -13,26 +13,27 @@ class Manager {
     const baseDir = '/www/wwwroot/judge';
     this.workDir = `${baseDir}/${config.taskId}`;
     this.sampleDir = `${baseDir}/sample/${config.questionId}`;
+    // docker最小内存6M
     this.compileCMD =
       `docker run --mount type=bind,source=${this.workDir},target=/judge -v ${this.sampleDir}:/judge/sample:ro ` +
       `--ulimit fsize=${Math.round(config.fileSize * 1024)} --ulimit cpu=${
         Math.round(config.compileTime / 1000) + 2
-      }:${Math.round(config.compileTime / 1000) + 3} -m ${Math.round(
-        config.compileMemory / 1024
-      )}M --memory-swap=${Math.round(
-        config.compileMemory / 1024
-      )}M --ulimit core=5600000:6600000 ` +
+      }:${Math.round(config.compileTime / 1000) + 3} -m ${
+        Math.ceil(config.compileMemory / 1024) + 6
+      }M --memory-swap=${
+        Math.ceil(config.compileMemory / 1024) + 6
+      }M --ulimit core=5600000:6600000 ` +
       '-e CURRENT_STEP=compile demo';
 
     this.executeCMD = num =>
       `docker run --mount type=bind,source=${this.workDir},target=/judge -v ${this.sampleDir}:/judge/sample:ro ` +
       `--ulimit fsize=${Math.round(config.fileSize * 1024)} --ulimit cpu=${
         Math.round(config.executeTime / 1000) + 2
-      }:${Math.round(config.executeTime / 1000) + 3} -m ${Math.round(
-        config.executeMemory / 1024
-      )}M --memory-swap=${Math.round(
-        config.executeMemory / 1024
-      )}M --ulimit core=5600000:6600000 ` +
+      }:${Math.round(config.executeTime / 1000) + 3} -m ${
+        Math.ceil(config.executeMemory / 1024) + 6
+      }M --memory-swap=${
+        Math.ceil(config.executeMemory / 1024) + 6
+      }M --ulimit core=5600000:6600000 ` +
       `-e CURRENT_STEP=execute -e SAMPLE_NAME=${num} demo`;
   }
 
