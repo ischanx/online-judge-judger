@@ -9,6 +9,7 @@ const stat = util.promisify(fs.stat);
 class Manager {
   constructor(config) {
     this.config = config;
+    this.needCompile = ['cpp'].includes(config.language);
     this.samples = config.samples;
     const baseDir = '/www/wwwroot/judge';
     this.workDir = `${baseDir}/${config.taskId}`;
@@ -115,7 +116,13 @@ class Manager {
     return new Promise((resolve, reject) => {
       child_process.exec(this.compileCMD, {}, (error, stdout, stderr) => {
         error && reject(error);
-        resolve(JSON.parse(stdout));
+        let parse = null;
+        try {
+          parse = JSON.parse(stdout);
+          resolve(parse);
+        } catch (parseError) {
+          reject([error, stdout, stderr, parseError]);
+        }
       });
     });
   }
@@ -131,22 +138,17 @@ class Manager {
           this.executeCMD(String(num)),
           {},
           (error, stdout, stderr) => {
-            // console.log("err",error);
-            // console.log("stdout", stdout);
-            // console.log("stderr", stderr);
-            const res = JSON.parse(stdout);
-            const code = res.exitCode;
-            const signal = res.signalCode;
-            const map = {
-              152: '[OJ-152] TLE运行超时',
-              153: '[OJ-153] RE运行错误',
-              136: '[OJ-136] SIGFPE算术异常',
-              137: '[OJ-137] MLE超出内存限制',
-              139: '[OJ-139] MLE栈溢出',
-            };
-            res.status = map[code] ? map[code] : `[OJ-${code}] ${signal}`;
-            if (code === 0 && signal === null) resolve(res);
-            else reject(res);
+            if (error?.code)
+              resolve({
+                exitCode: error.code,
+                stderr,
+              });
+            try {
+              const res = JSON.parse(stdout);
+              resolve(res);
+            } catch (parseError) {
+              reject([error, stdout, stderr, parseError]);
+            }
           }
         );
       });
@@ -155,22 +157,13 @@ class Manager {
     for (let i = 1; i <= this.config.sampleNum; i++) {
       exeAll.push(exeOne(i));
     }
-
-    try {
-      const res = await Promise.all(exeAll);
-      res.sort((a, b) => a.timestamp - b.timestamp);
-      return res;
-    } catch (e) {
-      console.log(e);
-      return e;
-    }
+    return Promise.all(exeAll);
   }
 
   /**
    * 比较输出结果进行评测
-   * @returns {Promise<*[]>}
    */
-  async judge(executeResult) {
+  async compareOutput() {
     const computeMD5 = path => {
       const fs = require('fs');
       const crypto = require('crypto');
@@ -179,54 +172,96 @@ class Manager {
       hash.update(buffer, 'utf8');
       return hash.digest('hex');
     };
-    const judgeRes = [];
+    const detail = [];
+    let pass = true;
     for (let i = 1; i <= this.config.sampleNum; i++) {
-      const item = executeResult[i - 1];
-      if (item.cpuTime > this.config.executeTime) {
-        judgeRes.push('TLE');
-      } else if (item.executeMemory > this.config.executeMemory) {
-        judgeRes.push('MLE');
-      } else if (
+      if (
         computeMD5(`${this.sampleDir}/${i}.out`) ===
         computeMD5(`${this.workDir}/output/${i}.out`)
       ) {
-        judgeRes.push('AC');
-      } else judgeRes.push('WA');
+        detail.push('1');
+      } else {
+        detail.push('0');
+        pass = false;
+      }
     }
-    return judgeRes;
+    return {
+      detail: detail.join(''),
+      pass,
+    };
   }
 
   /**
    * 判题机入口
-   * @returns {Promise<void>}
    */
   async runner() {
+    // 环境初始化
     await this.created();
-    const c = await this.compile();
-    const e = await this.execute();
-    let res = {};
-    if (Array.isArray(e)) {
-      const j = await this.judge(e);
-      res = {
-        compile: c,
-        execute: e,
-        judge: j,
-      };
-      // console.log(res);
+    const res = {};
+    // 编译
+    if (this.needCompile) {
+      const compileRes = await this.compile();
+      if (compileRes.exitCode !== 0) {
+        res.err = 'Compile Error';
+        res.message = compileRes.stderr;
+        res.log = JSON.stringify(compileRes);
+      }
+      // 编译阶段有错可以直接返回CE
+      if (res.err) return res;
+    }
+    // 运行
+    const executeRes = await this.execute();
+    for (let i = 1; i <= this.config.sampleNum; i++) {
+      //   152: '[OJ-152] TLE运行超时',
+      //   153: '[OJ-153] RE运行错误',
+      //   136: '[OJ-136] SIGFPE算术异常',
+      //   137: '[OJ-137] MLE超出内存限制',
+      //   139: '[OJ-139] MLE栈溢出',
+      const item = executeRes[i - 1];
+      if (
+        item.cpuTime > this.config.executeTime ||
+        [152].includes(item.exitCode) ||
+        (item.exitCode === null && item.err.signal === 'SIGTERM')
+      ) {
+        res.err = 'Time Limit Exceeded';
+      } else if (
+        item.executeMemory > this.config.executeMemory ||
+        [137, 139].includes(item.exitCode)
+      ) {
+        res.err = 'Memory Limit Exceeded';
+      } else if ([135, 136].includes(item.exitCode)) {
+        res.err = 'Runtime Error';
+      } else if (item.exitCode !== 0) {
+        res.err = 'Unknown Error';
+      }
+      // 遇到一个错误即可得出判断
+      if (res.err) {
+        res.message = item.stderr;
+        res.log = JSON.stringify(executeRes);
+        return res;
+      }
+    }
+
+    // 没有运行方面的错误就可以进行输出比较
+    const compareRes = await this.compareOutput();
+    if (!compareRes.pass) {
+      res.err = 'Wrong Answer';
     } else {
-      res = {
-        compile: c,
-        execute: e,
-      };
-      // console.log(res);
+      res.message = 'Accepted';
     }
     return res;
   }
 }
 
 const fn = async () => {
-  const res = await new Manager(workerData).runner();
-  parentPort.postMessage(res);
+  let result = {};
+  try {
+    result = await new Manager(workerData).runner();
+  } catch (judgeServerError) {
+    result.err = 'Judge Server Error';
+    result.log = JSON.stringify(judgeServerError);
+  }
+  parentPort.postMessage(result);
 };
 
 if (!isMainThread) {
