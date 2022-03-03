@@ -1,5 +1,6 @@
-import { Provide } from '@midwayjs/decorator';
+import { Config, Provide } from '@midwayjs/decorator';
 import { Worker } from 'worker_threads';
+import axios from 'axios';
 const os = require('os');
 const taskPool = [];
 const cpuCore = os.cpus().length;
@@ -7,6 +8,12 @@ let count = 0;
 
 @Provide()
 export class JudgeService {
+  @Config('BACKEND_URL')
+  BACKEND_URL: string;
+
+  @Config('JUDGE_TOKEN')
+  JUDGE_TOKEN: string;
+
   async add(submission) {
     taskPool.push(submission);
   }
@@ -34,6 +41,24 @@ export class JudgeService {
     };
   }
 
+  async finishTask(submissionId, data) {
+    const { log, ...result } = data;
+    return axios.post(
+      `${this.BACKEND_URL}/api/submission/update`,
+      {
+        submissionId,
+        result,
+        log,
+      },
+      {
+        headers: {
+          'x-judge-server-token': this.JUDGE_TOKEN,
+        },
+        responseType: 'json',
+      }
+    );
+  }
+
   async judge(data) {
     const {
       submissionId,
@@ -52,7 +77,7 @@ export class JudgeService {
       workerData: {
         taskId: submissionId,
         questionId: problemId,
-        fileName: problemId,
+        fileName: 'main',
         language: lang,
         compileTime,
         compileMemory,
@@ -66,50 +91,12 @@ export class JudgeService {
     });
 
     th.on('message', async data => {
-      const parser = origin => {
-        const res = {
-          pass: false,
-          memory: 1,
-          time: 12,
-          stdin: '',
-          stdout: '',
-          // expectedStdout: "",
-          stderr: '',
-          status: 'ac',
-        };
-        if (origin.compile.exitCode !== 0) {
-          res.status = 'asdasd';
-          res.stdin = origin.compile.err;
-          res.stderr = origin.compile.stderr;
-          res.stdout = origin.compile.stdout;
-        } else {
-          let time = 0;
-          let memory = 0;
-          let index = 0;
-          for (; index < origin.execute.length; index++) {
-            time = Math.max(origin.execute[index].cpuTime, time);
-            memory = Math.max(origin.execute[index].memory, memory);
-            if (origin.execute[index].exitCode !== 0) {
-              res.status = origin.execute[index].exitCode;
-              res.stdin = origin.compile.err;
-              res.stderr = origin.compile.stderr;
-              res.stdout = origin.compile.stdout;
-              res.time = time;
-              res.memory = memory;
-              break;
-            }
-          }
-        }
-
-        return res;
-      };
-
-      console.log({
-        result: parser(data),
-        runInfo: JSON.stringify(data),
-        status: 'success',
-      });
-
+      try {
+        const res = await this.finishTask(submissionId, data);
+        if (res.data.code !== 0) throw res.data;
+      } catch (e) {
+        console.log(e);
+      }
       count--;
       this.remove();
     });

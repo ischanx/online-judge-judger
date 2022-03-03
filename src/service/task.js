@@ -172,22 +172,25 @@ class Manager {
       hash.update(buffer, 'utf8');
       return hash.digest('hex');
     };
-    const detail = [];
-    let pass = true;
-    for (let i = 1; i <= this.config.sampleNum; i++) {
+    const totalCount = this.config.sampleNum;
+    const detail = new Array(totalCount);
+    let totalCorrect = 0;
+    for (let i = 1; i <= totalCount; i++) {
       if (
         computeMD5(`${this.sampleDir}/${i}.out`) ===
         computeMD5(`${this.workDir}/output/${i}.out`)
       ) {
-        detail.push('1');
+        detail[i - 1] = 1;
+        totalCorrect++;
       } else {
-        detail.push('0');
-        pass = false;
+        detail[i - 1] = 0;
       }
     }
     return {
-      detail: detail.join(''),
-      pass,
+      compareDetail: detail.join(''),
+      pass: totalCount === totalCorrect,
+      totalCorrect,
+      totalCount,
     };
   }
 
@@ -196,18 +199,19 @@ class Manager {
    */
   async runner() {
     // 环境初始化
+    const startTime = Date.now();
     await this.created();
-    const res = {};
+    let res = {};
     // 编译
     if (this.needCompile) {
       const compileRes = await this.compile();
       if (compileRes.exitCode !== 0) {
-        res.err = 'Compile Error';
+        res.error = 'Compile Error';
         res.message = compileRes.stderr;
         res.log = JSON.stringify(compileRes);
       }
       // 编译阶段有错可以直接返回CE
-      if (res.err) return res;
+      if (res.error) return res;
     }
     // 运行
     const executeRes = await this.execute();
@@ -221,21 +225,21 @@ class Manager {
       if (
         item.cpuTime > this.config.executeTime ||
         [152].includes(item.exitCode) ||
-        (item.exitCode === null && item.err.signal === 'SIGTERM')
+        (item.exitCode === null && item.error.signal === 'SIGTERM')
       ) {
-        res.err = 'Time Limit Exceeded';
+        res.error = 'Time Limit Exceeded';
       } else if (
         item.executeMemory > this.config.executeMemory ||
         [137, 139].includes(item.exitCode)
       ) {
-        res.err = 'Memory Limit Exceeded';
+        res.error = 'Memory Limit Exceeded';
       } else if ([135, 136].includes(item.exitCode)) {
-        res.err = 'Runtime Error';
+        res.error = 'Runtime Error';
       } else if (item.exitCode !== 0) {
-        res.err = 'Unknown Error';
+        res.error = 'Unknown Error';
       }
       // 遇到一个错误即可得出判断
-      if (res.err) {
+      if (res.error) {
         res.message = item.stderr;
         res.log = JSON.stringify(executeRes);
         return res;
@@ -245,10 +249,31 @@ class Manager {
     // 没有运行方面的错误就可以进行输出比较
     const compareRes = await this.compareOutput();
     if (!compareRes.pass) {
-      res.err = 'Wrong Answer';
+      res = {
+        err: 'Wrong Answer',
+        ...compareRes,
+      };
     } else {
       res.message = 'Accepted';
+      let maxTime = 0;
+      let maxMemory = 0;
+      const endTime = Date.now();
+      executeRes.forEach(e => {
+        maxTime = Math.max(maxTime, e.cpuTime);
+        maxMemory = Math.max(maxMemory, e.memory);
+      });
+      res = {
+        ...res,
+        time: maxTime,
+        memory: maxMemory,
+        startTime,
+        endTime,
+        realTime: endTime - startTime,
+        ...compareRes,
+        log: JSON.stringify(executeRes),
+      };
     }
+
     return res;
   }
 }
@@ -258,8 +283,9 @@ const fn = async () => {
   try {
     result = await new Manager(workerData).runner();
   } catch (judgeServerError) {
-    result.err = 'Judge Server Error';
-    result.log = JSON.stringify(judgeServerError);
+    console.log(judgeServerError);
+    result.error = 'Judge Server Error';
+    result.log = judgeServerError.toString();
   }
   parentPort.postMessage(result);
 };
