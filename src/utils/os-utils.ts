@@ -1,5 +1,5 @@
 const os = require('os');
-export const getCPUUsage = async (free = false) => {
+export const getCPUUsage = async (free = false): Promise<number> => {
   const stats1 = getCPUInfo();
   const startIdle = stats1.idle;
   const startTotal = stats1.total;

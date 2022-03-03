@@ -14,6 +14,10 @@ export class JudgeService {
   @Config('JUDGE_TOKEN')
   JUDGE_TOKEN: string;
 
+  get currentTaskCount() {
+    return taskPool.length;
+  }
+
   async add(submission) {
     taskPool.push(submission);
   }
