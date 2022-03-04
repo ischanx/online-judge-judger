@@ -131,7 +131,7 @@ class Manager {
    * 运行得到输出
    * @returns {Promise<unknown[]>}
    */
-  async execute() {
+  async execute(isParallel = false) {
     const exeOne = num =>
       new Promise((resolve, reject) => {
         child_process.exec(
@@ -153,11 +153,32 @@ class Manager {
         );
       });
 
-    const exeAll = [];
-    for (let i = 1; i <= this.config.sampleNum; i++) {
-      exeAll.push(exeOne(i));
+    if (isParallel) {
+      // 并发执行
+      const exeAll = [];
+      for (let i = 1; i <= this.config.sampleNum; i++) {
+        exeAll.push(exeOne(i));
+      }
+      return Promise.all(exeAll);
+    } else {
+      // 顺序执行
+      const exeAll = [];
+      let last = exeOne(1);
+      for (let i = 2; i <= this.config.sampleNum; i++) {
+        last = new Promise((resolve, reject) => {
+          last
+            .then(res => {
+              exeAll.push(res);
+              resolve(exeOne(i));
+            })
+            .catch(err => reject(err));
+        });
+      }
+      return last.then(res => {
+        exeAll.push(res);
+        return exeAll;
+      });
     }
-    return Promise.all(exeAll);
   }
 
   /**
@@ -214,7 +235,7 @@ class Manager {
       if (res.error) return res;
     }
     // 运行
-    const executeRes = await this.execute();
+    const executeRes = await this.execute(this.config.isParallel);
     for (let i = 1; i <= this.config.sampleNum; i++) {
       //   152: '[OJ-152] TLE运行超时',
       //   153: '[OJ-153] RE运行错误',

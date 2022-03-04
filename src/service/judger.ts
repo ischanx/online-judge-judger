@@ -5,7 +5,8 @@ const os = require('os');
 const taskPool = [];
 const cpuCore = os.cpus().length;
 let count = 0;
-
+let currentMemory = 0;
+const dockerMinMem = 8000; // docker预留最小内存
 @Provide()
 export class JudgeService {
   @Config('BACKEND_URL')
@@ -22,7 +23,7 @@ export class JudgeService {
     taskPool.push(submission);
   }
 
-  async remove() {
+  async next() {
     if (count >= cpuCore || taskPool.length === 0) return;
     const task = taskPool.shift();
     await this.run(task);
@@ -32,12 +33,25 @@ export class JudgeService {
     submission.time = Date.now();
 
     if (count < cpuCore) {
-      if (submission.executeMemory * 1.2 < os.freemem() && count > 0) {
+      if (
+        currentMemory + submission.executeMemory + dockerMinMem >
+          os.freemem() &&
+        count > 0
+      ) {
         taskPool.unshift(submission);
         return;
       }
       count++;
-      this.judge(submission);
+      // 判断内存是否足够并发评测
+      const parallelMemory =
+        (submission.executeMemory + dockerMinMem) * submission.samples.length;
+      const isParallelRun = currentMemory + parallelMemory < os.freemem();
+      const taskMemory = isParallelRun
+        ? parallelMemory
+        : submission.executeMemory + dockerMinMem;
+      currentMemory += taskMemory;
+      submission.taskMemory = taskMemory;
+      this.judge(submission, isParallelRun);
     } else await this.add(submission);
     return {
       run: count,
@@ -63,7 +77,7 @@ export class JudgeService {
     );
   }
 
-  async judge(data) {
+  async judge(data, isParallel = false) {
     const {
       submissionId,
       code,
@@ -75,6 +89,7 @@ export class JudgeService {
       executeTime = 5000,
       executeMemory = 524288,
       fileSize = 102400,
+      taskMemory,
     } = data;
 
     const th = new Worker(__dirname + '/task.js', {
@@ -91,6 +106,7 @@ export class JudgeService {
         code: code,
         samples: samples,
         sampleNum: samples.length,
+        isParallel,
       },
     });
 
@@ -102,7 +118,8 @@ export class JudgeService {
         console.log(e);
       }
       count--;
-      this.remove();
+      currentMemory -= taskMemory;
+      this.next();
     });
   }
 }
