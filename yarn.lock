@@ -712,6 +712,13 @@
     "@types/yargs" "^15.0.0"
     chalk "^4.0.0"
 
+"@koa/cors@^3.0.0":
+  version "3.1.0"
+  resolved "https://registry.npmmirror.com/@koa/cors/-/cors-3.1.0.tgz#618bb073438cfdbd3ebd0e648a76e33b84f3a3b2"
+  integrity sha512-7ulRC1da/rBa6kj6P4g2aJfnET3z8Uf3SWu60cjbtxTA5g8lxRdX/Bd2P92EagGwwAhANeNw8T8if99rJliR6Q==
+  dependencies:
+    vary "^1.1.2"
+
 "@koa/router@^10.0.0":
   version "10.1.1"
   resolved "https://registry.nlark.com/@koa/router/download/@koa/router-10.1.1.tgz"
@@ -3041,6 +3048,13 @@ egg-core@^4.18.0:
     node-homedir "^1.1.1"
     ready-callback "^2.1.0"
     utility "^1.16.1"
+
+egg-cors@^2.2.3:
+  version "2.2.3"
+  resolved "https://registry.npmmirror.com/egg-cors/-/egg-cors-2.2.3.tgz#a21a0f6b2dc627a4e778a7282c1adf99aa63f88f"
+  integrity sha512-MLG4pQekZpycLXR45ZAIgFpFYshosBxu1CMdhXAzqPzxUn0xI21gVzqLqcxUrzzulaErCwG6qMXaS1eFyj9u2w==
+  dependencies:
+    "@koa/cors" "^3.0.0"
 
 egg-development@^2.4.2:
   version "2.7.0"

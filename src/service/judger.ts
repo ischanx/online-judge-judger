@@ -59,22 +59,20 @@ export class JudgeService {
     };
   }
 
-  async finishTask(submissionId, data) {
+  async finishTask(submissionId, data, originData) {
     const { log, ...result } = data;
-    return axios.post(
-      `${this.BACKEND_URL}/api/submission/update`,
-      {
-        submissionId,
-        result,
-        log,
+    const updateData = {
+      submissionId,
+      result,
+      log,
+      ...originData,
+    };
+    return axios.post(`${this.BACKEND_URL}/api/submission/update`, updateData, {
+      headers: {
+        'x-judge-server-token': this.JUDGE_TOKEN,
       },
-      {
-        headers: {
-          'x-judge-server-token': this.JUDGE_TOKEN,
-        },
-        responseType: 'json',
-      }
-    );
+      responseType: 'json',
+    });
   }
 
   async judge(data, isParallel = false) {
@@ -90,6 +88,8 @@ export class JudgeService {
       executeMemory = 524288,
       fileSize = 102400,
       taskMemory,
+      contestId,
+      problemNumber,
     } = data;
 
     const th = new Worker(__dirname + '/task.js', {
@@ -112,7 +112,10 @@ export class JudgeService {
 
     th.on('message', async data => {
       try {
-        const res = await this.finishTask(submissionId, data);
+        const res = await this.finishTask(submissionId, data, {
+          contestId,
+          problemNumber,
+        });
         if (res.data.code !== 0) throw res.data;
       } catch (e) {
         console.log(e);

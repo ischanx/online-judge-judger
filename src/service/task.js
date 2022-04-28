@@ -246,7 +246,7 @@ class Manager {
       if (
         item.cpuTime > this.config.executeTime ||
         [152].includes(item.exitCode) ||
-        (item.exitCode === null && item.error.signal === 'SIGTERM')
+        (item.exitCode === null && item.err.signal === 'SIGTERM')
       ) {
         res.error = 'Time Limit Exceeded';
       } else if (
@@ -261,7 +261,7 @@ class Manager {
       }
       // 遇到一个错误即可得出判断
       if (res.error) {
-        res.message = item.stderr;
+        res.message = item.stderr || res.error;
         res.log = JSON.stringify(executeRes);
         return res;
       }
@@ -271,7 +271,8 @@ class Manager {
     const compareRes = await this.compareOutput();
     if (!compareRes.pass) {
       res = {
-        err: 'Wrong Answer',
+        error: 'Wrong Answer',
+        message: '没有通过测试样例',
         ...compareRes,
       };
     } else {
@@ -291,10 +292,9 @@ class Manager {
         endTime,
         realTime: endTime - startTime,
         ...compareRes,
-        log: JSON.stringify(executeRes),
       };
     }
-
+    res.log = JSON.stringify(executeRes);
     return res;
   }
 }
