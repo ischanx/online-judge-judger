@@ -85,7 +85,14 @@ class Manager {
         fs.rmdirSync(path);
       }
     };
-
+    const getFileExtension = lang => {
+      const map = {
+        c: 'c',
+        cpp: 'cpp',
+        jsNode: 'js',
+      };
+      return map[lang];
+    };
     try {
       deleteFolder(this.workDir);
       // await rmdir(this.workDir);
@@ -101,7 +108,9 @@ class Manager {
       const sourcecode = this.config.code;
       // 写入源代码文件
       await writeFile(
-        `${this.workDir}/${this.config.fileName}.${this.config.language}`,
+        `${this.workDir}/${this.config.fileName}.${getFileExtension(
+          this.config.language
+        )}`,
         sourcecode
       );
     } catch (e) {

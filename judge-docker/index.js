@@ -20,6 +20,9 @@ const env = () => {
       compileCMD: `/usr/bin/time -f ::run-info%S-%U-%M-%e::run-info g++ ${config.fileName}.cpp -o ${config.fileName}.run -DONLINE_JUDGE -O2 -w -lm -fmax-errors=3`,
       executeCMD: `/usr/bin/time -f ::run-info%S-%U-%M-%e::run-info ./${config.fileName}.run < ./sample/${process.env.SAMPLE_NAME}.in > output/${process.env.SAMPLE_NAME}.out;`,
     },
+    jsNode: {
+      executeCMD: `/usr/bin/time -f ::run-info%S-%U-%M-%e::run-info node ./${config.fileName}.js < ./sample/${process.env.SAMPLE_NAME}.in > output/${process.env.SAMPLE_NAME}.out;`,
+    },
   };
   return {
     compileCMD: preCompile + preset[config.language].compileCMD,

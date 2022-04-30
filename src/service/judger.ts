@@ -20,6 +20,11 @@ export class JudgeService {
   }
 
   async add(submission) {
+    if (!['cpp', 'c'].includes(submission.language)) {
+      // c/cpp外的语言时间为双倍时间空间
+      submission.executeTime = submission.executeTime * 2;
+      submission.executeMemory = submission.executeMemory * 2;
+    }
     taskPool.push(submission);
   }
 
