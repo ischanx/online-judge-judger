@@ -11,8 +11,10 @@ const env = () => {
   const preExecute = config.clear ? 'rm -rf output;mkdir output;' : '';
   const preset = {
     c: {
-      compileCMD: `gcc ${config.problemId}/${config.fileName}.c -o ${config.problemId}/${config.fileName}.run -O2 -DONLINE_JUDGE -w -lm -fmax-errors=3 -std=c11`,
+      compileCMD: `/usr/bin/time -f ::run-info%S-%U-%M-%e::run-info gcc ${config.fileName}.c -o ${config.fileName}.run -O2 -DONLINE_JUDGE -w -lm -fmax-errors=3 -std=c11`,
+      // compileCMD: `gcc ${config.problemId}/${config.fileName}.c -o ${config.problemId}/${config.fileName}.run -O2 -DONLINE_JUDGE -w -lm -fmax-errors=3 -std=c11`,
       // executeCMD: `${config.problemId}/${config.fileName}.run < data/${config.problemId}/${testNumber}.in > ${config.problemId}/user-${testNumber}.out;`,
+      executeCMD: `/usr/bin/time -f ::run-info%S-%U-%M-%e::run-info ./${config.fileName}.run < ./sample/${process.env.SAMPLE_NAME}.in > output/${process.env.SAMPLE_NAME}.out;`,
     },
     cpp: {
       compileCMD: `/usr/bin/time -f ::run-info%S-%U-%M-%e::run-info g++ ${config.fileName}.cpp -o ${config.fileName}.run -DONLINE_JUDGE -O2 -w -lm -fmax-errors=3`,

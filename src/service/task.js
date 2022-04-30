@@ -9,7 +9,7 @@ const stat = util.promisify(fs.stat);
 class Manager {
   constructor(config) {
     this.config = config;
-    this.needCompile = ['cpp'].includes(config.language);
+    this.needCompile = ['cpp', 'c'].includes(config.language);
     this.samples = config.samples;
     const baseDir = '/www/wwwroot/judge';
     this.workDir = `${baseDir}/${config.taskId}`;
