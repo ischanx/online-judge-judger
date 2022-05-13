@@ -52,7 +52,10 @@ export class ProblemController {
 
   @Post('/judge')
   async judge(@Body(ALL) body) {
-    const res = await this.judgeService.run(body);
+    let res;
+    if (process.env.SKIP_RUN) {
+      res = {};
+    } else res = await this.judgeService.run(body);
     this.ctx.body = res;
   }
 }

@@ -41,6 +41,7 @@
     "stop": "egg-scripts stop --title=my-midway-project",
     "start_build": "yarn build && cross-env NODE_ENV=development midway-bin dev",
     "dev": "cross-env ets && cross-env NODE_ENV=local midway-bin dev --ts --port=9001",
+    "dev:skip": "cross-env ets && cross-env NODE_ENV=local SKIP_RUN=1 midway-bin dev --ts --port=9001",
     "test": "midway-bin test --ts",
     "cov": "midway-bin cov --ts",
     "lint": "mwts check",
