@@ -24,7 +24,7 @@ class Manager {
       }M --memory-swap=${
         Math.ceil(config.compileMemory / 1024) + 6
       }M --ulimit core=5600000:6600000 ` +
-      '-e CURRENT_STEP=compile demo';
+      '-e CURRENT_STEP=compile runner';
 
     this.executeCMD = num =>
       `docker run --mount type=bind,source=${this.workDir},target=/judge -v ${this.sampleDir}:/judge/sample:ro ` +
@@ -35,7 +35,7 @@ class Manager {
       }M --memory-swap=${
         Math.ceil(config.executeMemory / 1024) + 6
       }M --ulimit core=5600000:6600000 ` +
-      `-e CURRENT_STEP=execute -e SAMPLE_NAME=${num} demo`;
+      `-e CURRENT_STEP=execute -e SAMPLE_NAME=${num} runner`;
   }
 
   /**
