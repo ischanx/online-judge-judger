@@ -82,6 +82,7 @@ export class JudgeService {
 
   async judge(data, isParallel = false) {
     const {
+      uid,
       submissionId,
       code,
       lang,
@@ -118,6 +119,7 @@ export class JudgeService {
     th.on('message', async data => {
       try {
         const res = await this.finishTask(submissionId, data, {
+          uid,
           contestId,
           problemNumber,
         });
