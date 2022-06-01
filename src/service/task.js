@@ -11,7 +11,7 @@ class Manager {
     this.config = config;
     this.needCompile = ['cpp', 'c'].includes(config.language);
     this.samples = config.samples;
-    const baseDir = '/www/wwwroot/judge';
+    const baseDir = '/online-judge';
     this.workDir = `${baseDir}/${config.taskId}`;
     this.sampleDir = `${baseDir}/sample/${config.questionId}`;
     // docker最小内存6M
